@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-file-earmark-text me-2"></i>
+                Invoice Analyzer
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Upload Invoice</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="uploadForm">
+                            <div class="mb-3">
+                                <label for="invoiceFile" class="form-label">Select Invoice (Image or PDF)</label>
+                                <input class="form-control" type="file" id="invoiceFile" name="invoice" accept=".jpg,.jpeg,.png,.pdf" required>
+                                <div class="form-text">Max file size: 5MB</div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary" id="uploadBtn">
+                                    <i class="bi bi-cloud-upload me-2"></i>Upload & Analyze
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Search Invoices</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="searchForm">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" id="searchInput" placeholder="Search by vendor, invoice #, etc.">
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Invoice List</h5>
+                        <button id="refreshBtn" class="btn btn-sm btn-light">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="loadingIndicator" class="text-center py-4 d-none">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Processing invoice with AI...</p>
+                        </div>
+                        <div id="invoicesList" class="list-group">
+                            <!-- Invoices will be loaded here -->
+                            <div class="text-center py-5 text-muted" id="emptyState">
+                                <i class="bi bi-file-earmark-x display-1"></i>
+                                <p class="mt-3">No invoices found. Upload your first invoice to get started.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Details Modal -->
+    <div class="modal fade" id="invoiceDetailsModal" tabindex="-1" aria-labelledby="invoiceDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="invoiceDetailsModalLabel">Invoice Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Vendor</h6>
+                            <p id="modalVendor" class="fw-bold fs-5">-</p>
+                            
+                            <div class="row">
+                                <div class="col-6">
+                                    <h6>Invoice Number</h6>
+                                    <p id="modalInvoiceNumber">-</p>
+                                </div>
+                                <div class="col-6">
+                                    <h6>Upload Date</h6>
+                                    <p id="modalUploadDate">-</p>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-6">
+                                    <h6>Invoice Date</h6>
+                                    <p id="modalDate">-</p>
+                                </div>
+                                <div class="col-6">
+                                    <h6>Due Date</h6>
+                                    <p id="modalDueDate">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6>Amount Summary</h6>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Subtotal:</span>
+                                        <span id="modalSubtotal">-</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Tax:</span>
+                                        <span id="modalTax">-</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-2">
+                                        <span class="fw-bold">Total:</span>
+                                        <span id="modalTotal" class="fw-bold">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+                    
+                    <h6>Line Items</h6>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalLineItems">
+                                <!-- Line items will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>Payment Terms</h6>
+                            <p id="modalPaymentTerms">-</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Notes</h6>
+                            <p id="modalNotes">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" id="deleteInvoiceBtn">
+                        <i class="bi bi-trash me-1"></i>Delete
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
